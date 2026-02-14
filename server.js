@@ -10,12 +10,14 @@ app.use(cors());
 app.use(express.json());
 
 // Stockage des fichiers reçus
-const storage = multer.memoryStorage(); // stocke temporairement en mémoire
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 // Map pour suivre IP destinataire et fichiers
-const filesMap = {}; // { filename: recipientIp }
+// { filename: { data: Buffer, ip: "192.168.100.x" } }
+const filesMap = {};
 
+// Upload
 app.post("/upload", upload.single("file"), (req, res) => {
   const file = req.file;
   const recipientIp = req.body.recipient_ip;
@@ -24,21 +26,25 @@ app.post("/upload", upload.single("file"), (req, res) => {
     return res.status(400).json({ error: "Fichier ou IP destinataire manquant" });
   }
 
-  // Stocker le fichier dans mémoire (pour simplifier, tu peux adapter pour disque)
   filesMap[file.originalname] = { data: file.buffer, ip: recipientIp };
 
   console.log(`Fichier reçu: ${file.originalname} pour IP ${recipientIp}`);
   res.json({ message: "Fichier reçu", filename: file.originalname });
 });
 
+// Lister fichiers avec IP destinataire
 app.get("/files", (req, res) => {
-  // Retourner uniquement le nom des fichiers
-  res.json({ files: Object.keys(filesMap) });
+  const filesList = Object.entries(filesMap).map(([filename, info]) => ({
+    filename,
+    recipient_ip: info.ip,
+  }));
+  res.json({ files: filesList });
 });
 
+// Télécharger fichier (vérifie IP)
 app.get("/download/:filename", (req, res) => {
   const { filename } = req.params;
-  const ip = req.query.ip; // client doit envoyer son IP en query
+  const ip = req.query.ip;
 
   const fileEntry = filesMap[filename];
   if (!fileEntry) return res.status(404).json({ error: "Fichier non trouvé" });
