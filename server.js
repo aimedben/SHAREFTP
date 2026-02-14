@@ -44,15 +44,10 @@ app.get("/files", (req, res) => {
 // Télécharger fichier (vérifie IP)
 app.get("/download/:filename", (req, res) => {
   const { filename } = req.params;
-  const ip = req.query.ip;
-
-  const fileEntry = filesMap[filename];
-  if (!fileEntry) return res.status(404).json({ error: "Fichier non trouvé" });
-
-  if (fileEntry.ip !== ip) {
-    return res.status(403).json({ error: "Accès refusé à ce fichier" });
-  }
-
+  const ip = (req.query.ip || "").toString().trim();
+if (fileEntry.ip.trim() !== ip) {
+  return res.status(403).json({ error: "Accès refusé à ce fichier" });
+}
   res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
   res.send(fileEntry.data);
 });
